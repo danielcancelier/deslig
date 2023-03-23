@@ -3,34 +3,35 @@ import pandas as pd
 import pymysql
 from sshtunnel import SSHTunnelForwarder
 from datetime import datetime, time
+from PIL import Image
 
 def conecta_ssh():
     try:
-        server = SSHTunnelForwarder(
-            '172.21.49.225',
-            ssh_username='daniel',
-            ssh_password='123',
-            remote_bind_address=('127.0.0.1', 3306)
-        )
-
         #server = SSHTunnelForwarder(
-        #    '172.24.173.15',
-        #    ssh_username='root',
-        #    ssh_password='ditec_8905',
+        #    '172.21.49.225',
+        #    ssh_username='daniel',
+        #    ssh_password='123',
         #    remote_bind_address=('127.0.0.1', 3306)
         #)
+        
+        server = SSHTunnelForwarder(
+            '172.16.15.206',
+            ssh_username=st.secrets["ssh_username"],
+            ssh_password=st.secrets["ssh_password"],
+            remote_bind_address=('127.0.0.1', 3306)
+        )
         server.start()
         return server
     except Exception as e:
         st.error(f"Não foi possível conectar via SSH: {e}")
         return None, None
 
-def conecta_bd(server):
+def conecta_bd(server):    
     try:
         db = pymysql.connect(
-            host="localhost",
-            user="root",
-            password="Ditec_8905",
+            host="127.0.0.1",
+            user= st.secrets["db_username"],
+            password=st.secrets["db_password"],
             database="dan",
             port=server.local_bind_port
         )
@@ -77,6 +78,9 @@ def intro():
         Causas operadora: intervenções da operadora (troca de equipamentos, cabeamento, fibra, etc)
     """
     )
+
+    image = Image.open('foto_chefe.JPG')
+    st.image(image, caption='Chefia')
 
 def inclui():
     # Página web com o formulário para inclusão dos dados
