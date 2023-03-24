@@ -75,8 +75,8 @@ def inclui():
     # Página web com o formulário para inclusão dos dados
     st.write('# Inclusão')
 
-    str_hi = '00:05'
-    str_hf = '23:45'
+    str_hi = '08:00'
+    str_hf = '18:00'
     hora_inicio_padrao = time.fromisoformat(str_hi)
     hora_fim_padrao = time.fromisoformat(str_hf)
 
@@ -115,15 +115,16 @@ def inclui():
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """, (causa_banco, operadora, predio, inicio, fim, justificativa, funci, log_gravado))
                     db.commit()
+                    with st.spinner('Gravando...'):
+                        fecha_bd(db)
+                        desconecta_ssh(server)
+                    st.success("Inclusão realizada com sucesso")
                     
                 except Exception as e:
                     db.rollback()
                     st.error(f'Erro ao gravar os dados: {e}')
 
-        with st.spinner('Gravando...'):
-            fecha_bd(db)
-            desconecta_ssh(server)
-        st.success("Inclusão realizada com sucesso")
+        
         
 def exclui():
     st.title("Exclusão")
@@ -140,7 +141,6 @@ def exclui():
                 # Executa a query e armazena o resultado em um DataFrame pandas
                 query = "SELECT * FROM manut_prog ORDER BY log_gravado DESC"
                 df = pd.read_sql(query, db)
-                print ('pd.read_sql')
                 
             # Exibe o DataFrame pandas na tela usando o Streamlit
             st.dataframe(df)
@@ -155,11 +155,10 @@ def exclui():
                 delete_query = f"DELETE FROM manut_prog WHERE id = {id_to_delete}"
                 cursor.execute(delete_query)
                 db.commit()
-
-        with st.spinner('Excluindo...'):
-            fecha_bd(db)
-            desconecta_ssh(server)
-        st.success(f"Linha {row_to_delete} excluída com sucesso!")
+                with st.spinner('Excluindo...'):
+                    fecha_bd(db)
+                    desconecta_ssh(server)
+                st.success(f"Linha {row_to_delete} excluída com sucesso!")
             
     return None
 
