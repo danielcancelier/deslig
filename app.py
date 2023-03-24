@@ -3,23 +3,16 @@ import pandas as pd
 import pymysql
 from sshtunnel import SSHTunnelForwarder
 from datetime import datetime, time
-from PIL import Image
 
 def conecta_ssh():
     try:
-        #server = SSHTunnelForwarder(
-        #    '172.21.49.225',
-        #    ssh_username='daniel',
-        #    ssh_password='123',
-        #    remote_bind_address=('127.0.0.1', 3306)
-        #)
-        
         server = SSHTunnelForwarder(
-            '172.16.15.206',
+            st.secrets["ssh_host"],
             ssh_username=st.secrets["ssh_username"],
             ssh_password=st.secrets["ssh_password"],
             remote_bind_address=('127.0.0.1', 3306)
         )
+        
         server.start()
         return server
     except Exception as e:
@@ -32,7 +25,7 @@ def conecta_bd(server):
             host="127.0.0.1",
             user= st.secrets["db_username"],
             password=st.secrets["db_password"],
-            database="dan",
+            database=st.secrets["db_database"],
             port=server.local_bind_port
         )
         cursor = db.cursor(pymysql.cursors.DictCursor)
@@ -44,14 +37,12 @@ def conecta_bd(server):
 def fecha_bd(db):
     try:
         db.close()
-        print ('fechou bd')
     except Exception as e:
         st.warning(f"Erro ao fechar conexão com o banco de dados: {e}")
 
 def desconecta_ssh(server):
     try:
         server.stop()
-        print ('fechou ssh')
     except Exception as e:
         st.warning(f"Erro ao desconectar do servidor SSH: {e}")
 
@@ -79,8 +70,6 @@ def intro():
     """
     )
 
-    image = Image.open('foto_chefe.JPG')
-    st.image(image, caption='Chefia')
 
 def inclui():
     # Página web com o formulário para inclusão dos dados
@@ -113,11 +102,11 @@ def inclui():
         # Insere os dados na tabela
         log_gravado = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        with st.spinner("Conectando ao servidor SSH..."):
+        with st.spinner("Conectando 2..."):
             server = conecta_ssh()
 
         if server:
-            with st.spinner("Conectando ao banco de dados..."):
+            with st.spinner("Conectando 1..."):
                 db, cursor = conecta_bd(server)
             
                 try:
@@ -126,23 +115,24 @@ def inclui():
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """, (causa_banco, operadora, predio, inicio, fim, justificativa, funci, log_gravado))
                     db.commit()
-                    st.success('Incluido com sucesso')
-
+                    
                 except Exception as e:
                     db.rollback()
                     st.error(f'Erro ao gravar os dados: {e}')
 
-        fecha_bd(db)
-        desconecta_ssh(server)
-
+        with st.spinner('Gravando...'):
+            fecha_bd(db)
+            desconecta_ssh(server)
+        st.success("Inclusão realizada com sucesso")
+        
 def exclui():
     st.title("Exclusão")
 
-    with st.spinner("Conectando ao servidor SSH..."):
+    with st.spinner("Conectando 2..."):
         server = conecta_ssh()
 
     if server:
-        with st.spinner("Conectando ao banco de dados..."):
+        with st.spinner("Conectando 1..."):
             db, cursor = conecta_bd(server)
 
         if cursor:
@@ -166,11 +156,11 @@ def exclui():
                 cursor.execute(delete_query)
                 db.commit()
 
-                # Exibe uma mensagem informando que a linha foi excluída
-                st.success(f"Linha {row_to_delete} excluída com sucesso!")
-
-        fecha_bd(db)
-        desconecta_ssh(server)
+        with st.spinner('Excluindo...'):
+            fecha_bd(db)
+            desconecta_ssh(server)
+        st.success(f"Linha {row_to_delete} excluída com sucesso!")
+            
     return None
 
 def data_frame_demo():
