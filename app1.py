@@ -27,8 +27,8 @@ def conecta_bd(server):
             password=st.secrets["db_password"],
             database=st.secrets["db_database"],
             # port=server.local_bind_port
-            ssl_ca='.streamlit/DigiCertGlobalRootG2.crt.pem',
-            # ssl_ca='DigiCertGlobalRootG2.crt.pem',
+            # ssl_ca='.streamlit/DigiCertGlobalRootG2.crt.pem',
+            ssl_ca='https://github.com/danielcancelier/deslig/blob/main/DigiCertGlobalRootG2.crt.pem',
             ssl_disabled=False
             )
         cursor = db.cursor(pymysql.cursors.DictCursor)
