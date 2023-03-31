@@ -8,28 +8,36 @@ from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, AgGridThe
 #from st_aggrid.grid_options_builder import GridOptionsBuilder 
 
 def conecta_ssh():
-    try:
-        server = SSHTunnelForwarder(
-            st.secrets["ssh_host"],
-            ssh_username=st.secrets["ssh_username"],
-            ssh_password=st.secrets["ssh_password"],
-            remote_bind_address=('127.0.0.1', 3306)
-        )
-        
-        server.start()
-        return server
-    except Exception as e:
-        st.error(f"Não foi possível conectar via SSH: {e}")
-        return None, None
+    if st.secrets["ssh_host"] != 'localhost':
+        try:
+            server = SSHTunnelForwarder(
+                st.secrets["ssh_host"],
+                ssh_username=st.secrets["ssh_username"],
+                ssh_password=st.secrets["ssh_password"],
+                remote_bind_address=('127.0.0.1', 3306)
+            )
+            
+            server.start()
+            return server
+        except Exception as e:
+            st.error(f"Não foi possível conectar via SSH: {e}")
+            return None, None
+    else:
+        return 'localhost'
 
-def conecta_bd(server):    
+
+def conecta_bd(server):
+    if st.secrets["ssh_host"] != 'localhost':
+        Port = server.local_bind_port
+    else:
+        Port = 3306
     try:
         db = pymysql.connect(
             host= st.secrets["db_host"],
-            user= st.secrets["db_username"],
-            password=st.secrets["db_password"],
             database=st.secrets["db_database"],
-            port=server.local_bind_port
+            port=Port,
+            user= st.secrets["db_username"],
+            password=st.secrets["db_password"] 
             )
         cursor = db.cursor(pymysql.cursors.DictCursor)
         return db, cursor
@@ -45,13 +53,12 @@ def fecha_bd(db):
         st.warning(f"Erro ao fechar conexão com o banco de dados: {e}")
 
 def desconecta_ssh(server):
-    try:
-        server.stop()
-        print ('fechando ssh...')
-    except Exception as e:
-        st.warning(f"Erro ao desconectar do servidor SSH: {e}")
-
-
+    if st.secrets["ssh_host"] != 'localhost':
+        try:
+            server.stop()
+            print ('fechando ssh...')
+        except Exception as e:
+            st.warning(f"Erro ao desconectar do servidor SSH: {e}")
     
 #######################################
 
