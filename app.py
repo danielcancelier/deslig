@@ -4,8 +4,48 @@ import pymysql
 from sshtunnel import SSHTunnelForwarder
 from datetime import datetime, time
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, AgGridTheme
-#from st_aggrid import AgGrid
-#from st_aggrid.grid_options_builder import GridOptionsBuilder 
+import csv
+from io import BytesIO
+
+import pandas as pd
+
+def outras():
+    st.title("Outras opções")
+
+    # Verifica se o botão "Baixar CSV" foi clicado
+    if st.button('Baixar arquivo de próximos desligamentos'):
+        server = conecta_ssh()
+        if server:
+            db, cursor = conecta_bd(server)
+
+            # Seleciona registros com data de início maior ou igual à data de hoje
+            query = f"""
+                SELECT causa_banco, operadora, predio, inicio, fim
+                FROM manut_prog
+                WHERE inicio >= CURDATE()
+                ORDER BY inicio
+            """
+            cursor.execute(query)
+            result = cursor.fetchall()
+
+            fecha_bd(db)
+            desconecta_ssh(server)
+
+            # Cria o DataFrame do pandas com os resultados da consulta
+            df = pd.DataFrame(result)
+
+            # Converte o DataFrame para um CSV delimitado por ponto e vírgula
+            csv_data = df.to_csv(sep=';', index=False)
+
+            # Envia o arquivo CSV para download
+            st.download_button(
+                label="Clique para baixar o arquivo",
+                data=csv_data,
+                file_name="manut_prog.csv",
+                mime="text/csv"
+            )
+
+
 
 def conecta_ssh():
     if st.secrets["ssh_host"] != 'localhost':
@@ -140,6 +180,19 @@ def exclui():
         db, cursor = conecta_bd(server)
         query = "SELECT * FROM manut_prog ORDER BY log_gravado DESC"
         df = pd.read_sql(query, db)
+        
+        df = df.rename(columns={
+            'id': 'ID',
+            'causa_banco': 'BB',
+            'operadora': 'Oper',
+            'predio': 'Prédio',
+            'inicio': 'Inicio',
+            'fim': 'Fim',
+            'justificativa': 'Justif',
+            'funci': 'Func',
+            'log_gravado': 'Log'
+        })
+
         gd = GridOptionsBuilder.from_dataframe(df)
         gd.configure_pagination (enabled=True)
         gd.configure_default_column(editable=False, groupable=True)
@@ -176,7 +229,8 @@ def exclui():
 itens_menu = {
     "Selecione": intro,
     "Incluir": inclui,
-    "Excluir": exclui
+    "Excluir": exclui,
+    "Outras opções": outras
 }
 
 escolha = st.sidebar.selectbox("Escolha uma opção", itens_menu.keys())
