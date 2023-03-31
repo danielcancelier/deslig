@@ -5,9 +5,10 @@ from sshtunnel import SSHTunnelForwarder
 from datetime import datetime, time
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, AgGridTheme
 import csv
-from io import BytesIO
+import time
 
-import pandas as pd
+if "update_grid" not in st.session_state:
+    st.session_state.update_grid = 0
 
 def outras():
     st.title("Outras opções")
@@ -180,19 +181,6 @@ def exclui():
         db, cursor = conecta_bd(server)
         query = "SELECT * FROM manut_prog ORDER BY log_gravado DESC"
         df = pd.read_sql(query, db)
-        
-        df = df.rename(columns={
-            'id': 'ID',
-            'causa_banco': 'BB',
-            'operadora': 'Oper',
-            'predio': 'Prédio',
-            'inicio': 'Inicio',
-            'fim': 'Fim',
-            'justificativa': 'Justif',
-            'funci': 'Func',
-            'log_gravado': 'Log'
-        })
-
         gd = GridOptionsBuilder.from_dataframe(df)
         gd.configure_pagination (enabled=True)
         gd.configure_default_column(editable=False, groupable=True)
@@ -218,8 +206,17 @@ def exclui():
                 cursor.execute(delete_query)
                 db.commit()
                 st.success("Linha excluída com sucesso")
+
+                # Atualiza o estado da sessão e recarrega o grid
+                # st.session_state.update_grid += 1
+                time.sleep(2)
+                st.experimental_rerun()
             else:
                 st.warning("Nenhuma linha selecionada")
+
+        # Verifica se o estado da sessão foi atualizado e recarrega o grid
+        #if st.session_state.update_grid > 0:
+        #    st.experimental_rerun()
 
     fecha_bd(db)
     desconecta_ssh(server)
