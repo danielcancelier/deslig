@@ -5,10 +5,7 @@ from sshtunnel import SSHTunnelForwarder
 from datetime import datetime, time
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, AgGridTheme
 import csv
-import time
-
-if "update_grid" not in st.session_state:
-    st.session_state.update_grid = 0
+import time as pause
 
 def outras():
     st.title("Outras opções")
@@ -129,30 +126,48 @@ def inclui():
     # Página web com o formulário para inclusão dos dados
     st.write('# Inclusão')
 
+    # Carrega variáveis
+    Ok = True
     str_hi = '08:00'
     str_hf = '18:00'
     hora_inicio_padrao = time.fromisoformat(str_hi)
     hora_fim_padrao = time.fromisoformat(str_hf)
 
     # Recebe os dados do formulário
-    causa_banco = st.selectbox('Causa Banco:', [False, True])
-    operadora = st.selectbox('Operadora:', ['0', '1', '2'])
+    causa_banco = st.selectbox('Causa Banco:', ['Não', 'Sim'])
+    if causa_banco == 'Sim':
+        nao_pede_operadora = True
+    else:
+        nao_pede_operadora = False 
+    operadora = st.selectbox('Operadora:', ['Selecione','Embratel', 'Br-Digital'], disabled=nao_pede_operadora)
     predio = st.selectbox('Prédio:', ['Selecione','CTA01', 'CTA03', 'CTA05', 'CTA06', 'CTA09','SJP01'])
     data_inicio = st.date_input('Data de início:')
     hora_inicio = st.time_input('Hora de início:', value=hora_inicio_padrao)
     data_fim = st.date_input('Data de fim:')
     hora_fim = st.time_input('Hora de fim:', value=hora_fim_padrao)
     justificativa = st.text_area('Justificativa:')
-    funci = st.text_input('Funcionário:', max_chars=8)
+    funci = st.text_input('Matrícula funci:', max_chars=8).upper()
 
-    # Concatena data_inicio e hora_inicio
+    # Trata váriaveis de entrada
+    if causa_banco == 'Sim':
+        causa_banco = True
+        operadora = 0
+    else:
+        causa_banco = False
+        if operadora == 'Embratel':
+            operadora = 1
+        elif operadora == 'Br-Digital':
+            operadora = 2
+        else:
+            st.error('Selecione uma operadora')
+            Ok = False
+
     inicio = datetime.combine(data_inicio, hora_inicio)
-
-    # Concatena data_fim e hora_fim
     fim = datetime.combine(data_fim, hora_fim)
 
+
     # Botão de confirmação para gravar os dados
-    if st.button('Gravar'):
+    if st.button('Gravar') and Ok==True:
         # Insere os dados na tabela
         log_gravado = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         server = conecta_ssh()
@@ -179,7 +194,7 @@ def exclui():
     server = conecta_ssh()
     if server:
         db, cursor = conecta_bd(server)
-        query = "SELECT * FROM manut_prog ORDER BY log_gravado DESC"
+        query = "SELECT log_gravado, funci, predio, inicio, fim, justificativa, id FROM manut_prog ORDER BY log_gravado DESC"
         df = pd.read_sql(query, db)
         gd = GridOptionsBuilder.from_dataframe(df)
         gd.configure_pagination (enabled=True)
@@ -198,6 +213,8 @@ def exclui():
         if sel_row:
             str_id = (sel_row[0]['id'])
             id_sel = int(str_id)
+        else:
+            id_sel = 0
 
         # Botão de exclusão
         if st.button('Excluir'):
@@ -206,17 +223,10 @@ def exclui():
                 cursor.execute(delete_query)
                 db.commit()
                 st.success("Linha excluída com sucesso")
-
-                # Atualiza o estado da sessão e recarrega o grid
-                # st.session_state.update_grid += 1
-                time.sleep(2)
+                pause.sleep(2)
                 st.experimental_rerun()
             else:
                 st.warning("Nenhuma linha selecionada")
-
-        # Verifica se o estado da sessão foi atualizado e recarrega o grid
-        #if st.session_state.update_grid > 0:
-        #    st.experimental_rerun()
 
     fecha_bd(db)
     desconecta_ssh(server)
@@ -229,6 +239,5 @@ itens_menu = {
     "Excluir": exclui,
     "Outras opções": outras
 }
-
 escolha = st.sidebar.selectbox("Escolha uma opção", itens_menu.keys())
 itens_menu[escolha]()
