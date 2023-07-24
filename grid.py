@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-formato_colunas={
+formatacao_colunas={
     "operadora": st.column_config.SelectboxColumn(
         "Operadora",
         help="Operadora: 0=Nenhuma  1=Claro  2=BR-Digital",
+        width="small",
         required=True,
         default="0",
         options=[
@@ -34,18 +35,38 @@ formato_colunas={
         "Fim",
         format="YYYY-MM-DD HH:mm:ss",
         step=1
+    ),
+    "chamado": st.column_config.TextColumn(
+            "Chamado",
+            help="Numero do chamado da operadora"
+    ),
+    "incidente": st.column_config.CheckboxColumn(
+        "Incidente?",
+        help="Trata-se de um incidente?",
+        default=False,
     )
 }
 
 if 'df' not in st.session_state:
-    st.session_state['df'] = pd.read_csv('manut_prog.csv', sep=";", parse_dates=['inicio','fim'])
+    st.session_state['df'] = pd.read_csv(
+        'manut_prog.csv',
+        sep=";",
+        dtype={'operadora': object},
+        parse_dates=['inicio','fim']
+    )
 
-df = st.data_editor(st.session_state['df'], column_config=formato_colunas, num_rows="dynamic", hide_index=True)
+######################################## INICIO #######################################
+
+st.header('Desligamentos programados / incidentes')
+
+
+df = st.data_editor(
+    st.session_state['df'], 
+    column_config=formatacao_colunas, 
+    num_rows="dynamic",
+    hide_index=True    
+)
 
 bt_salvar = st.button('Salvar alterações')
 if bt_salvar:
     df.to_csv('manut_prog.csv', sep=";", index=False)
-
-
-
-
